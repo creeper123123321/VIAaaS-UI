@@ -5,6 +5,7 @@ import java.util.Map;
 
 public enum PacketHandlerRegistry {
     HANDSHAKE(HandshakeHandler.handshake, new HandshakeHandler());
+
     private final Class<?> klass;
     private final PacketHandler handler;
     private static final Map<Class<?>, PacketHandler> handlers = new HashMap<>();

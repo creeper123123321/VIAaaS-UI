@@ -1,7 +1,8 @@
-package com.viaversion.aas.ui.command;
+package com.viaversion.aas.ui.command.sub;
 
 import com.google.common.net.HostAndPort;
-import com.velocitypowered.api.command.SimpleCommand;
+import com.mojang.brigadier.context.CommandContext;
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
@@ -15,7 +16,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ConnectCommand implements SimpleCommand {
+public class ConnectCommand implements Subcommand {
     private final OptionParser optionParser = new OptionParser();
     private final OptionSpec<Void> help = optionParser.acceptsAll(Arrays.asList("h", "help"), "Prints help").forHelp();
     private final OptionSpec<String> version = optionParser.acceptsAll(Arrays.asList("v", "version"), "Sets the version to use when connecting to backend")
@@ -43,23 +44,24 @@ public class ConnectCommand implements SimpleCommand {
                 .filter(it -> it instanceof OptionDescriptor)
                 .forEach((option) -> player.sendMessage(Component.text(formatArgName(option.options()) + ": "
                         + ((OptionDescriptor) option).description())));
-        //noinspection unchecked
     }
 
     protected String getSuffix() {
-        return ".via.geyserconnect.net";
+        return ".via.geyserconnect.net";  // todo unhardcode
     }
 
     @Override
-    public void execute(Invocation invocation) {
-        if (!(invocation.source() instanceof Player)) {
-            invocation.source().sendMessage(Component.text("Not a Player", NamedTextColor.RED));
-            return; // todo
+    public int run(CommandContext<CommandSource> ctx) {
+        if (!(ctx.getSource() instanceof Player)) {
+            ctx.getSource().sendMessage(Component.text("Not a Player", NamedTextColor.RED));
+            return 0; // todo
         }
-        OptionSet parsed = optionParser.parse(invocation.arguments());
+        String[] args = ctx.getArguments().containsKey("args") ?
+                ctx.getArgument("args", String.class).split(" ") : new String[0];
+        OptionSet parsed = optionParser.parse(args);
         if (parsed.has(help) || !parsed.hasArgument(backAddress)) {
-            sendHelp(((Player) invocation.source()));
-            return;
+            sendHelp(((Player) ctx.getSource()));
+            return 0;
         }
 
         String version = parsed.valueOf(this.version);
@@ -73,9 +75,10 @@ public class ConnectCommand implements SimpleCommand {
         finalAddress += getSuffix();
 
         InetSocketAddress socket = InetSocketAddress.createUnresolved(finalAddress, 25565);
-        invocation.source().sendMessage(Component.text("Connecting to " + socket));
+        ctx.getSource().sendMessage(Component.text("Connecting to " + socket));
         RegisteredServer server = proxy.registerServer(new ServerInfo("viaaas-" + lastServerId.getAndIncrement(), socket));
 
-        ((Player) invocation.source()).createConnectionRequest(server).connectWithIndication();
+        ((Player) ctx.getSource()).createConnectionRequest(server).connectWithIndication();
+        return 1;
     }
 }
